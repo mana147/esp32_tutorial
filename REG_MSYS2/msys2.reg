@@ -1,0 +1,48 @@
+Windows Registry Editor Version 5.00
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\mingw32]
+@="MinGW &32 Bash Here"
+"Icon"="\"D:\\msys32\\mingw32.exe\""
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\mingw64]
+@="MinGW &64 Bash Here"
+"Icon"="\"D:\\msys32\\mingw64.exe\""
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\msys2]
+@="MSYS2 Bash Here"
+"Icon"="\"D:\\msys32\\msys2.ico\""
+
+
+[HKEY_CLASSES_ROOT\Folder\shell\mingw32]
+@="MinGW &32 Bash Here"
+"Icon"="\"D:\\msys32\\mingw32.exe\""
+
+[HKEY_CLASSES_ROOT\Folder\shell\mingw64]
+@="MinGW &64 Bash Here"
+"Icon"="\"D:\\msys32\\mingw64.exe\""
+
+[HKEY_CLASSES_ROOT\Folder\shell\msys2]
+@="MSYS2 Bash Here"
+"Icon"="\"D:\\msys32\\msys2.ico\""
+
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\mingw32\command]
+@="D:\\msys32\\usr\\bin\\mintty.exe /bin/bash -lc 'export MSYSTEM=MINGW32; cd \"$(cygpath \"%V/\")\"; export CHERE_INVOKING=1; exec bash --login -i'"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\mingw64\command]
+@="D:\\msys32\\usr\\bin\\mintty.exe /bin/bash -lc 'export MSYSTEM=MINGW64; cd \"$(cygpath \"%V/\")\"; export CHERE_INVOKING=1; exec bash --login -i'"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\msys2\command]
+@="D:\\msys32\\usr\\bin\\mintty.exe /bin/bash -lc 'export MSYSTEM=MSYS;    cd \"$(cygpath \"%V/\")\"; export CHERE_INVOKING=1; exec bash --login -i'"
+
+
+[HKEY_CLASSES_ROOT\Folder\shell\mingw32\command]
+@="D:\\msys32\\usr\\bin\\mintty.exe /bin/bash -lc 'export MSYSTEM=MINGW32; cd \"$(cygpath \"%V/\")\"; export CHERE_INVOKING=1; exec bash --login -i'"
+
+[HKEY_CLASSES_ROOT\Folder\shell\mingw64\command]
+@="D:\\msys32\\usr\\bin\\mintty.exe /bin/bash -lc 'export MSYSTEM=MINGW64; cd \"$(cygpath \"%V/\")\"; export CHERE_INVOKING=1; exec bash --login -i'"
+
+[HKEY_CLASSES_ROOT\Folder\shell\msys2\command]
+@="D:\\msys32\\usr\\bin\\mintty.exe /bin/bash -lc 'export MSYSTEM=MSYS;    cd \"$(cygpath \"%V/\")\"; export CHERE_INVOKING=1; exec bash --login -i'"
