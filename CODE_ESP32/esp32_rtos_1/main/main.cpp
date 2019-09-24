@@ -202,7 +202,8 @@ void app_main()
     xTaskCreatePinnedToCore (&task_1 , "task 1" , 1024*4 , NULL , 5 , NULL , CORE_APP );
     xTaskCreatePinnedToCore (&task_2 , "task 2" , 1024*4 , NULL , 5 , NULL , CORE_APP );
 
-    vTaskSwitchContext(); /* or vTaskStartScheduler() */
+    vTaskSwitchContext(); 
+    /* or vTaskStartScheduler() */
 }
 
 /*----------------------------------------*/
