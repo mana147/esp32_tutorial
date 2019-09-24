@@ -1,5 +1,7 @@
-# Hello World Example
+# esp32-rtos-1 
 
-Starts a FreeRTOS task to print "Hello World"
+ESP32 - RTOS 
 
-See the README.md file in the upper level 'examples' directory for more information about examples.
+use delay.
+------------------------------------
+bài tập đèn giao thông 2 làn , sử dụng delay

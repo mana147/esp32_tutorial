@@ -1,0 +1,64 @@
+{
+    "configurations": [
+        {
+            "name": "ESP32-Win",
+            "includePath": [
+                "${workspaceRoot}",
+                "${workspaceRoot}/components",
+                "${workspaceRoot}/build",
+                "${workspaceRoot}/build/include",
+                "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\lib\\gcc\\xtensa-esp32-elf\\5.2.0\\include",
+                "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\lib\\gcc\\xtensa-esp32-elf\\5.2.0\\include-fixed",
+                "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\xtensa-esp32-elf\\include",
+                "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\xtensa-esp32-elf\\sysroot\\usr\\include",
+                "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\xtensa-esp32-elf\\include",
+                "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components",
+                "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components\\esp_common\\include",
+                "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components\\spi_flash\\include",
+                "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components\\esp32\\include\\rom",
+                "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components\\soc\\include\\soc",
+                "${env:IDF_PATH}/components/esp32/include",
+                "${env:IDF_PATH}/components/esp32/include",
+                "${env:IDF_PATH}/components/newlib/include",
+                "${env:IDF_PATH}/components/freertos/include",
+                "${env:IDF_PATH}/components/nvs_flash/include",
+                "${env:IDF_PATH}/components/driver/include",
+                "${env:IDF_PATH}/components/log/include",
+                "${env:IDF_PATH}/components/nvs_flash/test_nvs_host",
+                "${env:IDF_PATH}/components/"
+            ],
+            "intelliSenseMode": "clang-x64",
+            "browse": {
+                "path": [
+                    "${workspaceRoot}",
+                    "${workspaceRoot}/components",
+                    "${workspaceRoot}/build",
+                    "${workspaceRoot}/build/include",
+                    "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\lib\\gcc\\xtensa-esp32-elf\\5.2.0\\include",
+                    "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\lib\\gcc\\xtensa-esp32-elf\\5.2.0\\include-fixed",
+                    "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\xtensa-esp32-elf\\include",
+                    "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\xtensa-esp32-elf\\sysroot\\usr\\include",
+                    "D:\\msys32\\home\\phamh\\esp\\xtensa-esp32-elf\\xtensa-esp32-elf\\include",
+                    "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components",
+                    "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components\\esp_common\\include",
+                    "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components\\spi_flash\\include",
+                    "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components\\esp32\\include\\rom",
+                    "D:\\msys32\\home\\phamh\\esp\\esp-idf\\components\\soc\\include\\soc",
+                    "${env:IDF_PATH}/components/esp32/include",
+                    "${env:IDF_PATH}/components/newlib/include",
+                    "${env:IDF_PATH}/components/freertos/include",
+                    "${env:IDF_PATH}/components/nvs_flash/include",
+                    "${env:IDF_PATH}/components/driver/include",
+                    "${env:IDF_PATH}/components/log/include",
+                    "${env:IDF_PATH}/components/nvs_flash/test_nvs_host",
+                    "${env:IDF_PATH}/components/"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": "${workspaceRoot}/.vscode/browse.vc.db"
+            },
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
