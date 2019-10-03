@@ -182,19 +182,14 @@ void main_AutoOneTimer_1s (TimerHandle_t pxTimer)
 void app_main() 
 {
     printf("The app_main created\n");
-
     /*---------------------------*/
     /* ... Create Timer here ... */
     /*---------------------------*/
-
     xAutoOneTimer_1s =  xTimerCreate ("one shot time" , delay_s(1) , pdTRUE , 0 , &main_AutoOneTimer_1s ); 
-
     /*---------------------------*/
     /* ... Timer Start here ...  */
     /*---------------------------*/
-
     xTimerStart( xAutoOneTimer_1s , 0 );
-
     /*---------------------------*/
     /* ... Create tasks here ... */
     /*---------------------------*/
@@ -202,7 +197,7 @@ void app_main()
     xTaskCreatePinnedToCore (&task_1 , "task 1" , 1024*4 , NULL , 5 , NULL , CORE_APP );
     xTaskCreatePinnedToCore (&task_2 , "task 2" , 1024*4 , NULL , 5 , NULL , CORE_APP );
 
-    vTaskSwitchContext(); 
+    //vTaskSwitchContext(); 
     /* or vTaskStartScheduler() */
 }
 
