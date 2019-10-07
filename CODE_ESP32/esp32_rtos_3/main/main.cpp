@@ -69,29 +69,11 @@ void on_off_gpio_2(unsigned char k)
 /*----------------------------------------*/
 static void task_1(void *pvParameter)
 {
-    gpio_pad_select_gpio( LED_D_1 );
-    gpio_pad_select_gpio( LED_V_1 );
-    gpio_pad_select_gpio( LED_X_1 );
 
-    gpio_set_direction( LED_D_1 , GPIO_MODE_OUTPUT);
-    gpio_set_direction( LED_V_1 , GPIO_MODE_OUTPUT);
-    gpio_set_direction( LED_X_1 , GPIO_MODE_OUTPUT);
-
-    on_off_gpio_1(OFF);
 
     while (1)
     {
-        gpio_set_level (LED_D_1, ON );
-        vTaskDelay(delay_s(5));
-        gpio_set_level (LED_D_1, OFF );
 
-        gpio_set_level (LED_X_1, ON );
-        vTaskDelay(delay_s(3));
-        gpio_set_level (LED_X_1, OFF );
-
-        gpio_set_level (LED_V_1, ON );
-        vTaskDelay(delay_s(2));
-        gpio_set_level (LED_V_1, OFF );
     }
     
 }
@@ -99,29 +81,10 @@ static void task_1(void *pvParameter)
 static void task_2(void *pvParameter)
 {
 
-    gpio_pad_select_gpio( LED_D_2 );
-    gpio_pad_select_gpio( LED_V_2 );
-    gpio_pad_select_gpio( LED_X_2 );
-
-    gpio_set_direction( LED_D_2 , GPIO_MODE_OUTPUT);
-    gpio_set_direction( LED_V_2 , GPIO_MODE_OUTPUT);
-    gpio_set_direction( LED_X_2 , GPIO_MODE_OUTPUT);
-
-    on_off_gpio_2(OFF);
     
     while (1)
     {
-        gpio_set_level (LED_X_2, ON );
-        vTaskDelay(delay_s(3));
-        gpio_set_level (LED_X_2, OFF );
-
-        gpio_set_level (LED_V_2, ON );
-        vTaskDelay(delay_s(2));
-        gpio_set_level (LED_V_2, OFF );
-
-        gpio_set_level (LED_D_2, ON );
-        vTaskDelay(delay_s(5));
-        gpio_set_level (LED_D_2, OFF );
+  
     }
     
 }
@@ -138,8 +101,8 @@ void app_main()
     /* ... Create tasks here ... */
     /*---------------------------*/
 
-    xTaskCreatePinnedToCore (&task_1 , "task 1" , 1024*4 , NULL , 5 , NULL , CORE_APP );
-    xTaskCreatePinnedToCore (&task_2 , "task 2" , 1024*4 , NULL , 5 , NULL , CORE_APP );
+    xTaskCreatePinnedToCore (&task_1 , "task 1" , 1024*2 , NULL , 5 , NULL , CORE_APP );
+    xTaskCreatePinnedToCore (&task_2 , "task 2" , 1024*2 , NULL , 5 , NULL , CORE_APP );
 
     vTaskSwitchContext(); /* or vTaskStartScheduler() */
 }
