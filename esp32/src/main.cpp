@@ -28,7 +28,7 @@ PubSubClient client(espClient);
 
 void connectWiFi()
 {
-	WiFi.begin(ssid, password);
+	WiFi.begin(ssid, password); 
 	while (WiFi.status() != WL_CONNECTED)
 	{
 		delay(500);
