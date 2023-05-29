@@ -1,0 +1,12 @@
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  13.0% (used 42652 bytes from 327680 bytes)
+Flash: [=====     ]  53.3% (used 698641 bytes from 1310720 bytes)
+
+RAM:   [=         ]   6.8% (used 22248 bytes from 327680 bytes)
+Flash: [==        ]  18.4% (used 240797 bytes from 1310720 bytes)
+
+RAM:   [=         ]  13.0% (used 42652 bytes from 327680 bytes)
+Flash: [=====     ]  53.3% (used 698693 bytes from 1 310 720 bytes)
+
+Global variables use 42668 bytes (13%) of dynamic memory, leaving 285012 bytes for local variables. Maximum is 327680 bytes.
+Sketch uses 710101 bytes (33%) of program storage space. Maximum is 2 097 152 bytes.
