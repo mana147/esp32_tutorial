@@ -1,14 +1,16 @@
 #include <sstream>
 #include <string>
+#include <typeinfo>
 #include <algorithm>
-#include <time.h>
+#include <TimeLib.h>
 
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <Arduino_JSON.h>
 
 #define MQTT_MAX_PACKET_SIZE 1844
 #define num_device 100
-#define ESP_NAME "esp_001_001"
+#define ESP_NAME "esp_001_002"
 
 #include <PubSubClient.h>
 // Bluetooth LE
@@ -23,13 +25,14 @@ const char *password = "Vcc123**";
 // const char *ssid = "P301";
 // const char *password = "123456789";
 
-const char *serverName = "http://phub.bctoyz.com/api/v1/map/log-devices";
+const char *serverName = "http://phub.bctoyz.com";
+const char *api_part_log = "/api/v1/map/log-devices";
 
 const char *ntpServer = "pool.ntp.org"; // vn.pool.ntp.org
 const long gmtOffset_sec = 3600;
 const int daylightOffset_sec = 3600;
 
-String arr_name[] = {"dps0", "dps1", "dps2", "dps3", "dps4", "dps5", "dps6", "dps7", "dps8", "dps9"};
+String arr_name[] = {"dps1", "dps2", "dps3", "R23040111", "R23040110", "R23040106-", "R23040107", "R23040108"};
 
 /* MQTT credentials and connection */
 const char *mqttServer = "127.0.0.1";
@@ -52,9 +55,21 @@ typedef struct
 	char *data;
 } BeaconData;
 
+int current_time = 0;
 uint8_t bufferIndex = 0;			  // Found devices counter
 BeaconData bufferBeacons[num_device]; // Buffer to store found device data
 uint8_t message_char_buffer[MQTT_MAX_PACKET_SIZE];
+
+// -----------------------------------------
+
+template <class T>
+String type_name(const T &)
+{
+	String s = __PRETTY_FUNCTION__;
+	int start = s.indexOf("[with T = ") + 10;
+	int stop = s.lastIndexOf(']');
+	return s.substring(start, stop);
+}
 
 // -----------------------------------------
 // hàm này sử dụng thuật toán XOR để thực hiện mã hóa và giải mã.
@@ -214,17 +229,22 @@ void ScanBeacons()
 	// Stop BLE
 	pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
 	pBLEScan->stop();
-	delay(100);
+	delay(500);
 }
 
 void SendDataPOST(String data)
 {
-
 	WiFiClient client;
 	HTTPClient http;
 
+	char result[100];
+
+	// Ghép hai chuỗi vào nhau
+	strcpy(result, serverName);
+	strcat(result, api_part_log);
+
 	// Your Domain name with URL path or IP address with path
-	http.begin(client, serverName);
+	http.begin(client, result);
 
 	String recv_token = "1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35"; // Complete Bearer token
 	recv_token = "Bearer " + recv_token;							  // Adding "Bearer " before token
@@ -239,101 +259,139 @@ void SendDataPOST(String data)
 	// Free resources
 	http.end();
 }
-// -----------------------------------------
+
+void timeDataGET()
+{
+	HTTPClient http;
+
+	String serverPath = "http://phub.bctoyz.com/api/v1/map/system-time";
+
+	// Your Domain name with URL path or IP address with path
+	http.begin(serverPath.c_str());
+
+	String recv_token = "1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35"; // Complete Bearer token
+	recv_token = "Bearer " + recv_token;
+
+	http.addHeader("Content-Type", "application/json");
+	http.addHeader("Authorization", recv_token); // Adding Bearer token as HTTP header
+
+	// Send HTTP GET request
+	int httpResponseCode = http.GET();
+
+	if (httpResponseCode > 0)
+	{
+		Serial.print("HTTP Response code: ");
+		Serial.println(httpResponseCode);
+		String payload = http.getString();
+
+		JSONVar myObject = JSON.parse(payload);
+		// JSON.typeof(jsonVar) can be used to get the type of the var
+		if (JSON.typeof(myObject) == "undefined")
+		{
+			Serial.println("Parsing input failed!");
+			return;
+		}
+
+		if (myObject.hasOwnProperty("current_time"))
+		{
+			// Serial.print("myObject[\"current_time\"] = ");
+			// Serial.println((int)myObject["current_time"]);
+			current_time = (int)myObject["current_time"];
+		}
+	}
+
+	// Free resources
+	http.end();
+}
+
+void device_HTTP_GET()
+{
+	HTTPClient http;
+
+	String serverPath = "http://phub.bctoyz.com/api/v1/device";
+	http.begin(serverPath.c_str());
+
+	String recv_token = "Bearer 1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35";
+	http.addHeader("Content-Type", "application/json");
+	http.addHeader("Authorization", recv_token); // Adding Bearer token as HTTP header
+
+	// Send HTTP GET request
+	int httpResponseCode = http.GET();
+
+	if (httpResponseCode > 0)
+	{
+		Serial.print("HTTP Response code: ");
+		Serial.println(httpResponseCode);
+		String payload = http.getString();
+
+		JSONVar myObject = JSON.parse(payload);
+
+		if (JSON.typeof(myObject) == "undefined")
+		{
+			Serial.println("Parsing input failed!");
+			return;
+		}
+
+		if (myObject.hasOwnProperty("current_time"))
+		{
+			Serial.print("myObject[\"current_time\"] = ");
+			Serial.println((int)myObject["current_time"]);
+		}
+
+		if (myObject.hasOwnProperty("data"))
+		{
+			Serial.print("myObject[\"data\"] = ");
+			Serial.println(myObject["data"]);
+			Serial.println(myObject["data"][0]);
+
+			// int leng_data = myObject["data"].length();
+		}
+	}
+
+	// Free resources
+	http.end();
+}
+
+// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
 
 void setup()
 {
 	Serial.begin(115200);
 
+	connectWiFi();
+
+	// get list devices
+	device_HTTP_GET();
+
+	while (true)
+	{
+		// Serial.print(".");
+		delay(1000);
+	}
+
+	// // get time
+	// // timeDataGET();
+	// // setTime(current_time);
 
 	// Can only be called once
 	BLEDevice::init("BLE");
 
 	// init and get the time
-	configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+	// configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 }
+
+// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
 
 void loop()
 {
-	// boolean result;
 
 	// Scan Beacons
 	ScanBeacons();
 
-	// // SenML begins
-	// String payloadString = "{\"e\":[";
-	// for (uint8_t i = 0; i < bufferIndex; i++)
-	// {
-	// 	payloadString += "{\"m\":\"";
-	// 	payloadString += String(buffer[i].address);
-	// 	payloadString += "\",\"r\":\"";
-	// 	payloadString += String(buffer[i].rssi);
-	// 	payloadString += "\"}";
-	// 	if (i < bufferIndex - 1)
-	// 	{
-	// 		payloadString += ',';
-	// 	}
-	// }
-	// // SenML ends. Add this stations MAC
-	// payloadString += "],\"st\":\"";
-	// payloadString += String(WiFi.macAddress());
-	// // Add board temperature in fahrenheit
-	// payloadString += "\"}";
-
-	// // Print and publish payload
-	// Serial.print("MAX len: ");
-	// Serial.println(MQTT_MAX_PACKET_SIZE);
-
-	// Serial.print("Payload length: ");
-	// Serial.println(payloadString.length());
-	// Serial.println(payloadString);
-
-	// for (uint8_t i = 0; i < bufferIndex; i++)
-	// {
-	// }
-
-	// Serial.println("------------------------------");
-	// for (uint8_t i = 0; i < bufferIndex; i++)
-	// {
-	// 	Serial.print(bufferBeacons[i].name);
-	// 	Serial.print(" : ");
-	// 	Serial.print(bufferBeacons[i].data);
-	// 	Serial.print(" : ");
-	// 	Serial.print(bufferBeacons[i].address);
-	// 	Serial.print(" : ");
-	// 	Serial.println(bufferBeacons[i].rssi);
-	// }
-	// Serial.println("------------------------------");
-
-	// SenML begins
-	String httpRequestData = "{\n";
-	httpRequestData += "\"device_id\":\"" ESP_NAME "\",\n";
-	httpRequestData += "\"list_beacon_data\": [\n";
-
-	for (uint8_t i = 0; i < bufferIndex; i++)
-	{
-		httpRequestData += "{\n";
-		httpRequestData += "\"name\":\"" + String(bufferBeacons[i].name) + "\",\n";
-		httpRequestData += "\"manu\":\"4c000215\",\n";
-		httpRequestData += "\"uuid\": \"" + String(bufferBeacons[i].data) + "\",\n";
-		httpRequestData += "\"rssi\": " + String(bufferBeacons[i].rssi) + "\n";
-		httpRequestData += "\"}";
-
-		if (i < bufferIndex - 1)
-		{
-			httpRequestData += ',';
-		}
-	}
-
-	httpRequestData += "],\n";
-	httpRequestData += "\"time\": \"1968764165\"\n";
-	httpRequestData += "}";
-
-	Serial.println(httpRequestData);
-
-	// ----------------------------------------
-	// ----------------------------------------
-	// ----------------------------------------
 	// Reconnect WiFi if not connected
 	while (WiFi.status() != WL_CONNECTED)
 	{
@@ -342,19 +400,41 @@ void loop()
 
 	if (WiFi.status() == WL_CONNECTED)
 	{
-		printLocalTime();
+
+		// SenML begins
+		String httpRequestData = "{";
+		httpRequestData += "device_id: " ESP_NAME ",";
+		httpRequestData += "list_beacon_data: [";
+
+		for (uint8_t i = 0; i < bufferIndex; i++)
+		{
+			httpRequestData += "{";
+			httpRequestData += "name: " + String(bufferBeacons[i].name) + ",";
+			httpRequestData += "manu: 4c000216,";
+			httpRequestData += "uuid: " + String(bufferBeacons[i].data) + ",";
+			httpRequestData += "rssi: " + String(bufferBeacons[i].rssi);
+			httpRequestData += "}";
+
+			if (i < bufferIndex - 1)
+			{
+				httpRequestData += ",";
+			}
+		}
+
+		httpRequestData += "],";
+		httpRequestData += "time:" + String(1685605688);
+		httpRequestData += "}";
+		Serial.println(httpRequestData);
+
 		SendDataPOST(httpRequestData);
 	}
-
-	// payloadString.getBytes(message_char_buffer, payloadString.length() + 1);
-	// result = client.publish("/beacons/office", message_char_buffer, payloadString.length(), false);
-	// Serial.print("PUB Result: ");
-	// Serial.println(result);
 
 	// Start over the scan loop
 	bufferIndex = 0;
 	// Add delay to slow down publishing frequency if needed.
-	delay(100);
+	delay(500);
 }
 
-// -----------------------------------------
+// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
