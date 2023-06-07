@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <freertos/FreeRTOS.h>
 #include <esp_task_wdt.h>
+#include <ESP32Time.h>
 
 #define num_device 200
 
@@ -14,8 +15,10 @@ const char *password = "Vcc123**";
 
 String array_name_device[num_device];
 
-// ------------------------------------------------------------------------------
+ESP32Time rtc;
 
+// ------------------------------------------------------------------------------
+// GMT
 class TimestampConverter
 {
 public:
@@ -61,6 +64,7 @@ void connectWiFi()
 	Serial.println("Connected to the WiFi network");
 }
 // ------------------------------------------------------------------------------
+
 void device_HTTP_GET()
 {
 	extern String array_name_device[];
@@ -98,27 +102,7 @@ void device_HTTP_GET()
 
 			int current_time = myObject["current_time"];
 
-			Serial.print("current_time");
-			Serial.println(current_time);
-
-			int year, month, day, hour, minute, second;
-
-			TimestampConverter::convertTimestamp(current_time, year, month, day, hour, minute, second);
-
-			// In các thành phần ngày, tháng, năm, giờ, phút và giây
-			Serial.print("Date: ");
-			Serial.print(day);
-			Serial.print("/");
-			Serial.print(month);
-			Serial.print("/");
-			Serial.println(year);
-
-			Serial.print("Time: ");
-			Serial.print(hour);
-			Serial.print(":");
-			Serial.print(minute);
-			Serial.print(":");
-			Serial.println(second);
+			rtc.setTime(current_time);
 
 			vTaskDelay(pdMS_TO_TICKS(100));
 		}
@@ -187,6 +171,9 @@ void setup()
 
 void loop()
 {
+	Serial.print("getTime : "); Serial.println(rtc.getTime("RTC0: %A, %B %d %Y %H:%M:%S"));	 // (String) returns time with specified format
+	Serial.print("getEpoch : "); Serial.println(rtc.getEpoch());	 //  (unsigned long)
+	Serial.print("getLocalEpoch : "); Serial.println(rtc.getLocalEpoch()); //  (unsigned long) epoch without offset, same for all instances
 	vTaskDelay(1000);
 }
 // ----------------------------------------------------------

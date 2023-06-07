@@ -3,23 +3,21 @@
 #include <typeinfo>
 #include <algorithm>
 #include <TimeLib.h>
-
 #include <Arduino.h>
 #include <esp_task_wdt.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
-
-#define MQTT_MAX_PACKET_SIZE 1844
-#define num_device 100
-#define ESP_NAME "esp_001_004"
-
 #include <PubSubClient.h>
-// Bluetooth LE
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
+#include <ESP32Time.h>
+
+#define MQTT_MAX_PACKET_SIZE 1844
+#define num_device 100
+#define ESP_NAME "esp_001_004"
 
 const char *ssid = "VCCorp";
 const char *password = "Vcc123**";
@@ -66,6 +64,8 @@ BeaconData bufferBeacons[num_device]; // Buffer to store found device data
 uint8_t message_char_buffer[MQTT_MAX_PACKET_SIZE];
 
 String array_name_device[100];
+
+ESP32Time rtc;
 
 // -----------------------------------------
 
@@ -352,8 +352,7 @@ void device_HTTP_GET()
 
 			int current_time = myObject["current_time"];
 
-			Serial.print(current_time);
-
+			rtc.setTime(current_time);
 		}
 
 		if (myObject.hasOwnProperty("data"))
@@ -441,6 +440,8 @@ void setup()
 void loop()
 {
 
+	unsigned long timestamp = rtc.getEpoch();
+
 	// Scan Beacons
 	ScanBeacons();
 
@@ -455,7 +456,9 @@ void loop()
 
 		// SenML begins
 		String httpRequestData = "{\n";
+		httpRequestData += "\"name\":\"" ESP_NAME "\",\n";
 		httpRequestData += "\"device_id\":\"" ESP_NAME "\",\n";
+		httpRequestData += "\"type\":\"hub\",\n";
 		httpRequestData += "\"list_beacon_data\": [\n";
 
 		for (uint8_t i = 0; i < bufferIndex; i++)
@@ -464,8 +467,8 @@ void loop()
 			httpRequestData += "\"name\":\"" + String(bufferBeacons[i].name) + "\",\n";
 			httpRequestData += "\"manu\":\"4c000215\",\n";
 			httpRequestData += "\"uuid\": \"" + String(bufferBeacons[i].data) + "\",\n";
-			httpRequestData += "\"rssi\": \"" + String(bufferBeacons[i].rssi) + " \" \n ";
-			httpRequestData += "}";
+			httpRequestData += "\"rssi\":\"" + String(bufferBeacons[i].rssi) + "\"\n";
+			httpRequestData += "}\n";
 
 			if (i < bufferIndex - 1)
 			{
@@ -474,7 +477,7 @@ void loop()
 		}
 
 		httpRequestData += "],\n";
-		httpRequestData += "\"time\": \"1968764165\"\n";
+		httpRequestData += "\"time\":\"" + String(timestamp) + "\"\n";
 		httpRequestData += "}";
 
 		Serial.println(httpRequestData);
@@ -485,7 +488,7 @@ void loop()
 	// Start over the scan loop
 	bufferIndex = 0;
 	// Add delay to slow down publishing frequency if needed.
-	delay(500);
+	delay(1000);
 }
 
 // -----------------------------------------------------------------------------------------
