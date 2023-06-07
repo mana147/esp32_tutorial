@@ -4,13 +4,15 @@
 #include <algorithm>
 #include <TimeLib.h>
 
+#include <Arduino.h>
+#include <esp_task_wdt.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
 
 #define MQTT_MAX_PACKET_SIZE 1844
 #define num_device 100
-#define ESP_NAME "esp_001_002"
+#define ESP_NAME "esp_001_004"
 
 #include <PubSubClient.h>
 // Bluetooth LE
@@ -21,7 +23,6 @@
 
 const char *ssid = "VCCorp";
 const char *password = "Vcc123**";
-
 // const char *ssid = "P301";
 // const char *password = "123456789";
 
@@ -46,6 +47,10 @@ int beaconScanTime = 5;
 WiFiClient espClient;
 PubSubClient clientMQTT(espClient);
 
+int _T;
+int scanTime = 2;	   // In seconds
+int scanInterval = 10; // In mili-seconds
+
 // We collect each device MAC and RSSI
 typedef struct
 {
@@ -59,6 +64,8 @@ int current_time = 0;
 uint8_t bufferIndex = 0;			  // Found devices counter
 BeaconData bufferBeacons[num_device]; // Buffer to store found device data
 uint8_t message_char_buffer[MQTT_MAX_PACKET_SIZE];
+
+String array_name_device[100];
 
 // -----------------------------------------
 
@@ -140,7 +147,10 @@ public:
 
 			name.trim();
 
-			if (isTargetExist(name, arr_name, sizeof(arr_name) / sizeof(arr_name[0])))
+			Serial.print("name : ");
+			Serial.println(name);
+
+			if (isTargetExist(name, array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
 			{
 				// Serial.print(name);
 				// Serial.println(" target exists in the array");
@@ -189,6 +199,7 @@ class mCallbacks : public BLEAdvertisedDeviceCallbacks
 
 void connectWiFi()
 {
+	WiFi.disconnect();
 	WiFi.begin(ssid, password);
 	while (WiFi.status() != WL_CONNECTED)
 	{
@@ -306,6 +317,8 @@ void timeDataGET()
 
 void device_HTTP_GET()
 {
+	extern String array_name_device[];
+
 	HTTPClient http;
 
 	String serverPath = "http://phub.bctoyz.com/api/v1/device";
@@ -336,15 +349,26 @@ void device_HTTP_GET()
 		{
 			Serial.print("myObject[\"current_time\"] = ");
 			Serial.println((int)myObject["current_time"]);
+
+			int current_time = myObject["current_time"];
+
+			Serial.print(current_time);
+
 		}
 
 		if (myObject.hasOwnProperty("data"))
 		{
-			Serial.print("myObject[\"data\"] = ");
-			Serial.println(myObject["data"]);
-			Serial.println(myObject["data"][0]);
+			int leng_data = myObject["data"].length();
 
-			// int leng_data = myObject["data"].length();
+			// Serial.print("leng_data: "); Serial.println(leng_data);
+
+			for (int i = 0; i <= leng_data; i++)
+			{
+				String name = myObject["data"][i]["name"];
+
+				// Serial.println(name);
+				array_name_device[i] = name;
+			}
 		}
 	}
 
@@ -359,17 +383,44 @@ void device_HTTP_GET()
 void setup()
 {
 	Serial.begin(115200);
+	delay(500);
+
+	// make sure we don't get killed for our long running tasks
+	esp_task_wdt_init(10, false);
+
+	// esp_task_wdt_init(3, true); // enable panic so ESP32 restarts, interrupt when task executed for more than 3 secons
+	// esp_task_wdt_add(NULL);		// add current thread to WDT watch
+	// _T = millis();
+
+	// Serial.print("setup() running on core ");
+	// Serial.println(xPortGetCoreID());
 
 	connectWiFi();
 
 	// get list devices
 	device_HTTP_GET();
 
-	while (true)
-	{
-		// Serial.print(".");
-		delay(1000);
-	}
+	// // Tính toán chiều dài của mảng
+	// int length = sizeof(array_name_device) / sizeof(array_name_device[0]);
+
+	// Serial.print("Chiều dài của mảng: ");
+	// Serial.println(length);
+
+	// for (int i = 0; i < length; i++)
+	// {
+	// 	if (array_name_device[i].length() != 0)
+	// 	{
+	// 		Serial.print("Phần tử thứ ");
+	// 		Serial.print(i);
+	// 		Serial.print(": ");
+	// 		Serial.println(array_name_device[i]);
+	// 	}
+	// }
+
+	// while (true)
+	// {
+	// 	delay(1000);
+	// }
 
 	// // get time
 	// // timeDataGET();
@@ -380,6 +431,7 @@ void setup()
 
 	// init and get the time
 	// configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+	delay(100);
 }
 
 // -----------------------------------------------------------------------------------------
@@ -402,17 +454,17 @@ void loop()
 	{
 
 		// SenML begins
-		String httpRequestData = "{";
-		httpRequestData += "device_id: " ESP_NAME ",";
-		httpRequestData += "list_beacon_data: [";
+		String httpRequestData = "{\n";
+		httpRequestData += "\"device_id\":\"" ESP_NAME "\",\n";
+		httpRequestData += "\"list_beacon_data\": [\n";
 
 		for (uint8_t i = 0; i < bufferIndex; i++)
 		{
-			httpRequestData += "{";
-			httpRequestData += "name: " + String(bufferBeacons[i].name) + ",";
-			httpRequestData += "manu: 4c000216,";
-			httpRequestData += "uuid: " + String(bufferBeacons[i].data) + ",";
-			httpRequestData += "rssi: " + String(bufferBeacons[i].rssi);
+			httpRequestData += "{\n";
+			httpRequestData += "\"name\":\"" + String(bufferBeacons[i].name) + "\",\n";
+			httpRequestData += "\"manu\":\"4c000215\",\n";
+			httpRequestData += "\"uuid\": \"" + String(bufferBeacons[i].data) + "\",\n";
+			httpRequestData += "\"rssi\": \"" + String(bufferBeacons[i].rssi) + " \" \n ";
 			httpRequestData += "}";
 
 			if (i < bufferIndex - 1)
@@ -421,9 +473,10 @@ void loop()
 			}
 		}
 
-		httpRequestData += "],";
-		httpRequestData += "time:" + String(1685605688);
+		httpRequestData += "],\n";
+		httpRequestData += "\"time\": \"1968764165\"\n";
 		httpRequestData += "}";
+
 		Serial.println(httpRequestData);
 
 		SendDataPOST(httpRequestData);
