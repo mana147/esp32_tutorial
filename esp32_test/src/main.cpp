@@ -132,7 +132,6 @@ void device_HTTP_GET()
 
 void main_task(void *param)
 {
-	connectWiFi();
 
 	device_HTTP_GET();
 
@@ -152,8 +151,7 @@ void setup()
 	Serial.begin(115200);
 	delay(500);
 
-	// make sure we don't get killed for our long running tasks
-	esp_task_wdt_init(10, false);
+	connectWiFi();
 
 	xTaskCreate(main_task, "Main", 4096, NULL, 0, NULL);
 
@@ -171,9 +169,12 @@ void setup()
 
 void loop()
 {
-	Serial.print("getTime : "); Serial.println(rtc.getTime("RTC0: %A, %B %d %Y %H:%M:%S"));	 // (String) returns time with specified format
-	Serial.print("getEpoch : "); Serial.println(rtc.getEpoch());	 //  (unsigned long)
-	Serial.print("getLocalEpoch : "); Serial.println(rtc.getLocalEpoch()); //  (unsigned long) epoch without offset, same for all instances
+	// Serial.print("getTime : ");
+	// Serial.println(rtc.getTime("RTC0: %A, %B %d %Y %H:%M:%S")); // (String) returns time with specified format
+	// Serial.print("getEpoch : ");
+	// Serial.println(rtc.getEpoch()); //  (unsigned long)
+	// Serial.print("getLocalEpoch : ");
+	// Serial.println(rtc.getLocalEpoch()); //  (unsigned long) epoch without offset, same for all instances
 	vTaskDelay(1000);
 }
 // ----------------------------------------------------------
