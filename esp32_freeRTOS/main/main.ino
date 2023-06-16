@@ -17,7 +17,7 @@
 
 #define MQTT_MAX_PACKET_SIZE 1844
 #define num_device 100
-#define ESP_NAME "esp_001_001"
+#define ESP_NAME "esp_001_003"
 
 const char *ssid = "VCCorp";
 const char *password = "Vcc123**";
@@ -41,7 +41,6 @@ const char *mqttPassword = "123vcc";
 
 // Scan time must be longer than beacon interval
 
-int beaconScanTime = 5;
 WiFiClient espClient;
 PubSubClient clientMQTT(espClient);
 
@@ -356,7 +355,6 @@ void connectWiFi()
 	Serial.print(WiFi.SSID());
 	Serial.print(" IP: ");
 	Serial.println(WiFi.localIP());
-
 }
 
 void connectMQTT()
@@ -377,13 +375,13 @@ void connectMQTT()
 
 void ScanBeacons()
 {
+	int scanTime = 5 ; //In seconds
+
 	BLEScan *pBLEScan = BLEDevice::getScan(); // create new scan
 	pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
 	pBLEScan->setActiveScan(true); // active scan uses more power, but get results faster
-	pBLEScan->setInterval(10);
-	pBLEScan->setWindow(9);
 
-	BLEScanResults foundDevices = pBLEScan->start(1, true);
+	BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
 
 	// Stop BLE
 	pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
@@ -537,7 +535,7 @@ void setup()
 	// Can only be called once
 	BLEDevice::init("BLE");
 
-	delay(1000);
+	delay(500);
 }
 
 // -----------------------------------------------------------------------------------------
