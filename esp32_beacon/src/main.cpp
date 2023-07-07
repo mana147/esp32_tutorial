@@ -1,8 +1,9 @@
+#include "config.h"
+
 #include <sstream>
 #include <string>
 #include <typeinfo>
 #include <algorithm>
-#include <TimeLib.h>
 #include <Arduino.h>
 #include <esp_task_wdt.h>
 #include <WiFi.h>
@@ -15,50 +16,6 @@
 #include <BLEAdvertisedDevice.h>
 #include <ESP32Time.h>
 
-#define MQTT_MAX_PACKET_SIZE 1844
-#define num_device 100
-#define ESP_NAME "esp_001_003"
-
-#define MaxSecWiFi 30			// max time in s for WiFi setup, function will return WiFiErrorCode if WiFi was not successful.
-#define WiFiErrorCode 1000		// see above
-#define SaveDisconnectTime 1000 // Time im ms for save disconnection, needed to avoid that WiFi works only evey secon boot: https://github.com/espressif/arduino-esp32/issues/2501
-#define WiFiTime 100			// Max time in s for successful WiFi connection.
-#define WiFiOK 0				// WiFi connected
-#define WiFiTimedOut 1			// WiFi connection timed out
-#define WiFiNoSSID 2			// The SSID was not found during network scan
-#define WiFiRSSI -75			// Min. required signal strength for a good WiFi cennection. If lower, new scan is initiated in checkWiFi()
-
-// const char *ssid = "Larita 5";
-// const char *password = null;
-
-const char *ssid = "VCCorp";
-const char *password = "Vcc123**";
-
-// const char *ssid = "P301";
-// const char *password = "123456789";
-
-const char *serverName = "http://phub.bctoyz.com";
-const char *api_part_log = "/api/v1/map/log-devices";
-
-const char *ntpServer = "pool.ntp.org"; // vn.pool.ntp.org
-const long gmtOffset_sec = 3600;
-const int daylightOffset_sec = 3600;
-
-/* MQTT credentials and connection */
-const char *mqttServer = "mqtt.bctoyz.com";
-const int mqttPort = 1883;
-const char *mqttUser = "esp_001_001";
-const char *mqttPassword = "esp_001_001";
-
-// Scan time must be longer than beacon interval
-
-WiFiClient espClient;
-PubSubClient clientMQTT(espClient);
-
-int _T;
-int scanTime = 2;	   // In seconds
-int scanInterval = 10; // In mili-seconds
-
 // We collect each device MAC and RSSI
 typedef struct
 {
@@ -69,13 +26,19 @@ typedef struct
 } BeaconData;
 
 uint8_t scanTimeBeacons = 3; // In seconds
-int current_time = 0;
+uint8_t current_time = 0;
 uint8_t bufferIndex = 0;			  // Found devices counter
 BeaconData bufferBeacons[num_device]; // Buffer to store found device data
-uint8_t message_char_buffer[MQTT_MAX_PACKET_SIZE];
+uint8_t message_char_buffer[MQTT_MAX_PACKET_SIZE_ESP32];
 
+ESP32Time RTC;
 String array_name_device[100];
-ESP32Time rtc;
+WiFiClient espClient;
+PubSubClient clientMQTT(espClient);
+
+int _T;
+int scanTime = 2;	   // In seconds
+int scanInterval = 10; // In mili-seconds
 
 // -----------------------------------------
 
@@ -263,7 +226,8 @@ int connect2nearestAP()
 
 void checkWiFi()
 {
-	// Check the signal strength of the connection - if too low, reconnect to the strongest AP; good if the ESP is moving around and reconnection to the nearest AP makes sense
+	// Check the signal strength of the connection - if too low, reconnect to the strongest AP;
+	// good if the ESP is moving around and reconnection to the nearest AP makes sense
 	int i = 1;
 	if ((WiFi.status() == WL_CONNECTED) && (WiFi.RSSI() > WiFiRSSI) && (WiFi.RSSI() < -25))
 	{ // good connection
@@ -279,7 +243,7 @@ void checkWiFi()
 	{
 		Serial.print("connect2nearestAP was called #");
 		Serial.println(i);
-		delay(1000);
+		delay(100);
 		i++;
 		if (i > 10)
 		{
@@ -307,15 +271,12 @@ public:
 		{
 			String name = advertisedDevice.getName().c_str();
 
-			name.trim();
+			// Serial.print("device name :"); Serial.println(name);
 
-			Serial.print("name : ");
-			Serial.println(name);
-
-			if (isTargetExist(name, array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
+			// if (isTargetExist(name, array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
+			if (true)
 			{
-
-				// Serial.print(name);
+				// Serial.print("device name :"); Serial.println(name);
 				// Serial.println(" target exists in the array");
 
 				bufferBeacons[bufferIndex].name = name;
@@ -343,13 +304,11 @@ public:
 
 void connectWiFi()
 {
-	WiFi.disconnect();
-	// WiFi.begin(ssid, password);
 	WiFi.reconnect();
 	while (WiFi.status() != WL_CONNECTED)
 	{
-		delay(500);
 		Serial.println("Connecting to WiFi..");
+		delay(100);
 	}
 	Serial.println("Connected to the WiFi network");
 
@@ -368,16 +327,17 @@ void connectWiFi()
 void connectMQTT()
 {
 	clientMQTT.setServer(mqttServer, mqttPort);
-	Serial.println("Connecting to MQTT...");
-	if (clientMQTT.connect("ESP32Client", mqttUser, mqttPassword))
+	clientMQTT.setBufferSize(1048);
+	Serial.print("Connecting to MQTT...");
+	if (clientMQTT.connect("esp_001_008"))
 	{
 		Serial.println("connected");
 	}
 	else
 	{
 		Serial.print("failed with state ");
-		Serial.print(clientMQTT.state());
-		delay(1000);
+		Serial.println(clientMQTT.state());
+		delay(100);
 	}
 }
 
@@ -393,7 +353,7 @@ void ScanBeacons()
 	// Stop BLE
 	pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
 	pBLEScan->stop();
-	delay(100);
+	delay(50);
 }
 
 void SendDataPOST(String data)
@@ -428,7 +388,7 @@ void timeDataGET()
 {
 	HTTPClient http;
 
-	String serverPath = "http://phub.bctoyz.com/api/v1/map/system-time";
+	String serverPath = "http://10.0.10.250/api/v1/map/system-time";
 
 	// Your Domain name with URL path or IP address with path
 	http.begin(serverPath.c_str());
@@ -474,7 +434,7 @@ void device_HTTP_GET()
 
 	HTTPClient http;
 
-	String serverPath = "http://phub.bctoyz.com/api/v1/device";
+	String serverPath = "http://10.0.10.250/api/v1/device";
 	http.begin(serverPath.c_str());
 
 	String recv_token = "Bearer 1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35";
@@ -488,9 +448,10 @@ void device_HTTP_GET()
 	{
 		Serial.print("HTTP Response code: ");
 		Serial.println(httpResponseCode);
-		String payload = http.getString();
 
+		String payload = http.getString();
 		JSONVar myObject = JSON.parse(payload);
+		// Serial.println(myObject);
 
 		if (JSON.typeof(myObject) == "undefined")
 		{
@@ -502,9 +463,8 @@ void device_HTTP_GET()
 		{
 			// Serial.print("myObject[\"current_time\"] = ");
 			// Serial.println((int)myObject["current_time"]);
-
 			int current_time = myObject["current_time"];
-			rtc.setTime(current_time);
+			RTC.setTime(current_time);
 		}
 
 		if (myObject.hasOwnProperty("data"))
@@ -555,14 +515,14 @@ String payloadJson_01(unsigned long &timestamp)
 	return payloadString;
 }
 
-String payloadJson_02(unsigned long &timestamp, double &distance)
+String payloadJson_02(unsigned long &timestamp, double &distance, String name)
 {
 	String payload = "{\n";
 	payload += "\"distance\": \"" + String(distance) + "\",\n";
 	payload += "\"device_name\":\"" ESP_NAME "\",\n";
+	payload += "\"beacon_name\":\"" + name + "\",\n";
 	payload += "\"timestamp\":\"" + String(timestamp) + "\"\n";
 	payload += "}";
-
 	return payload;
 }
 
@@ -573,19 +533,14 @@ String payloadJson_02(unsigned long &timestamp, double &distance)
 void setup()
 {
 	Serial.begin(115200);
-
 	// connectWiFi();
 	connect2nearestAP();
-
 	// get list devices
 	device_HTTP_GET();
-
-	// die();
-
 	// Can only be called once
 	BLEDevice::init("BLE");
 
-	delay(500);
+	delay(100);
 }
 
 // -----------------------------------------------------------------------------------------
@@ -594,85 +549,68 @@ void setup()
 
 void loop()
 {
+	Serial.println();
+	Serial.println();
 	boolean resultMQTT;
-
-	unsigned long timestamp = rtc.getEpoch();
 
 	// Scan Beacons
 	ScanBeacons();
+	Serial.println();
+
+	Serial.print("bufferIndex : ");
+	Serial.println(bufferIndex);
+
+	unsigned long timestamp = RTC.getEpoch();
+	Serial.print("timestamp : ");
+	Serial.println(timestamp);
 
 	// Reconnect WiFi if not connected
+	Serial.print("wifi status : ");
+	Serial.println(WiFi.status());
 	while (WiFi.status() != WL_CONNECTED)
 	{
-		connectWiFi();
+		// connectWiFi();
+		// checkWiFi();
+		ESP.restart();
 	}
 
 	// Reconnect to MQTT if not connected
+	Serial.print("status_clientMQTT : ");
+	Serial.println(clientMQTT.connected());
 	while (!clientMQTT.connected())
 	{
 		connectMQTT();
 	}
 
-	clientMQTT.loop();
-
 	if (WiFi.status() == WL_CONNECTED)
 	{
-
 		for (uint8_t i = 0; i < bufferIndex; i++)
 		{
-
-			String name = String(bufferBeacons[i].name);
-			char *topic = "event1/client/";
-
-			// Tính toán độ dài của chuỗi kết quả
-			int resultLength = strlen(topic) + name.length();
-			// Cấp phát bộ nhớ đủ cho chuỗi kết quả
-			char *result = new char[resultLength + 1];
-			// Copy nội dung của chuỗi topic vào chuỗi kết quả
-			strcpy(result, topic);
-			// Nối chuỗi name vào chuỗi kết quả
-			strcat(result, name.c_str());
-			// Giải phóng bộ nhớ đã cấp phát
-			delete[] result;
-
-			Serial.println(result);
-
 			// tính toàn distance
 			double distance = getCalculatedDistance(bufferBeacons[i].rssi);
 
 			// create payload json
-			String dataJson = payloadJson_02(timestamp, distance);
+			String dataJson = payloadJson_02(timestamp, distance, String(bufferBeacons[i].name));
 
 			Serial.println(dataJson);
 
-			dataJson.getBytes(message_char_buffer, dataJson.length() + 1);
-			resultMQTT = clientMQTT.publish(result, message_char_buffer, dataJson.length(), false);
+			Serial.print("MQTT state: ");
+			Serial.println(clientMQTT.state());
+
+			resultMQTT = clientMQTT.publish(c_TOPIC, dataJson.c_str());
+
 			Serial.print("MQTT Result: ");
 			Serial.println(resultMQTT);
 
-			// payloadString += "\"name\":\"" + String(bufferBeacons[i].name) + "\",\n";
-			// payloadString += "\"uuid\": \"" + String(bufferBeacons[i].data) + "\",\n";
-			// payloadString += "\"rssi\":\"" + String(bufferBeacons[i].rssi) + "\"\n";
+			Serial.println();
 
-			if (i < bufferIndex - 1)
-			{
-				delay(50);
-			}
+			clientMQTT.loop();
+			delay(50);
 		}
-
-		// int met = 123;
-		// String dataJson = payloadJson_02(timestamp, met);
-		// Serial.println(dataJson);
-
-		// dataJson.getBytes(message_char_buffer, dataJson.length() + 1);
-		// result = clientMQTT.publish("event1/client/dps1", message_char_buffer, dataJson.length(), false);
-		// Serial.print("MQTT Result: ");
-		// Serial.println(result);
 	}
 
-	// Start over the scan loop
+	clientMQTT.loop();
 	bufferIndex = 0;
-	// Add delay to slow down publishing frequency if needed.
 	delay(100);
 }
 
