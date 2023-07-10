@@ -26,13 +26,13 @@
 // // Giải phóng bộ nhớ đã cấp phát
 // delete[] Toptic;
 
-#define ESP_NAME "esp_001_006"
-const char *c_TOPIC = "event1/client/esp_001_006";
+#define ESP_NAME "esp_001_005"
+const char *c_TOPIC = "event1/client/esp/esp_001_005";
 
-const char *ssid = "VCCorp";
-const char *password = "Vcc123**";
-// const char *ssid = "vcc-event1";
-// const char *password = "A12345678";
+// const char *ssid = "VCCorp";
+// const char *password = "Vcc123**";
+const char *ssid = "vcc-event1";
+const char *password = "A12345678";
 // const char *ssid = "P301";
 // const char *password = "123456789";
 

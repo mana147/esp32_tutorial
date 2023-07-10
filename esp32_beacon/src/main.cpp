@@ -329,7 +329,7 @@ void connectMQTT()
 	clientMQTT.setServer(mqttServer, mqttPort);
 	clientMQTT.setBufferSize(1048);
 	Serial.print("Connecting to MQTT...");
-	if (clientMQTT.connect("esp_001_008"))
+	if (clientMQTT.connect(ESP_NAME))
 	{
 		Serial.println("connected");
 	}
@@ -484,7 +484,7 @@ void device_HTTP_GET()
 	http.end();
 }
 
-String payloadJson_01(unsigned long &timestamp)
+String payloadJson_01(unsigned long &timestamp , double &distance)
 {
 	// SenML begins
 	String payloadString = "{\n";
@@ -497,9 +497,9 @@ String payloadJson_01(unsigned long &timestamp)
 	{
 		payloadString += "{\n";
 		payloadString += "\"name\":\"" + String(bufferBeacons[i].name) + "\",\n";
-		payloadString += "\"manu\":\"4c000215\",\n";
-		payloadString += "\"uuid\": \"" + String(bufferBeacons[i].data) + "\",\n";
-		payloadString += "\"rssi\":\"" + String(bufferBeacons[i].rssi) + "\"\n";
+		payloadString += "\"uuid\":\"" + String(bufferBeacons[i].data) + "\",\n";
+		payloadString += "\"rssi\":\"" + String(bufferBeacons[i].rssi) + "\",\n";
+		payloadString += "\"distance\":\"" + String(distance) + "\"\n";
 		payloadString += "}\n";
 
 		if (i < bufferIndex - 1)
@@ -590,8 +590,8 @@ void loop()
 			double distance = getCalculatedDistance(bufferBeacons[i].rssi);
 
 			// create payload json
-			String dataJson = payloadJson_02(timestamp, distance, String(bufferBeacons[i].name));
-
+			// String dataJson = payloadJson_02(timestamp, distance, String(bufferBeacons[i].name));
+			String dataJson = payloadJson_01(timestamp, distance);
 			Serial.println(dataJson);
 
 			Serial.print("MQTT state: ");
