@@ -27,18 +27,19 @@ typedef struct
 
 uint8_t scanTimeBeacons = 3; // In seconds
 uint8_t current_time = 0;
+
 uint8_t bufferIndex = 0;			  // Found devices counter
 BeaconData bufferBeacons[num_device]; // Buffer to store found device data
-uint8_t message_char_buffer[MQTT_MAX_PACKET_SIZE_ESP32];
+uint8_t message_char_buffer[MQTT_MAX_PACKET_SIZE];
 
 ESP32Time RTC;
-String array_name_device[100];
+String array_name_device[num_device];
 WiFiClient espClient;
 PubSubClient clientMQTT(espClient);
 
-int _T;
-int scanTime = 2;	   // In seconds
-int scanInterval = 10; // In mili-seconds
+// int _T;
+// int scanTime = 2;	   // In seconds
+// int scanInterval = 10; // In mili-seconds
 
 // -----------------------------------------
 
@@ -51,10 +52,11 @@ String type_name(const T &)
 	return s.substring(start, stop);
 }
 
-// -----------------------------------------
-// hàm này sử dụng thuật toán XOR để thực hiện mã hóa và giải mã.
-// Mỗi ký tự trong chuỗi được XOR với ký tự tương ứng trong khóa,
-// lặp lại khóa nếu chuỗi dài hơn khóa. Kết quả là một chuỗi được mã hóa hoặc giải mã.
+String combineStrings(const char *str1, const char *str2)
+{
+	String combinedString = String(str1) + String(str2);
+	return combinedString;
+}
 
 void die()
 {
@@ -63,6 +65,11 @@ void die()
 		delay(1000);
 	}
 }
+
+// -----------------------------------------
+// hàm này sử dụng thuật toán XOR để thực hiện mã hóa và giải mã.
+// Mỗi ký tự trong chuỗi được XOR với ký tự tương ứng trong khóa,
+// lặp lại khóa nếu chuỗi dài hơn khóa. Kết quả là một chuỗi được mã hóa hoặc giải mã.
 
 String encrypt(const String &message, const String &key)
 {
@@ -82,24 +89,17 @@ String decrypt(const String &encrypted, const String &key)
 
 // -----------------------------------------
 
+// tính toán khoảng cách
 double getCalculatedDistance(double rssi)
 {
-	double distance;
-
 	double referenceRssi = -65;
 	double referenceDistance = 1;
 	double flatFadingMitigation = 0;
 	double pathLossExponent = 0.2;
-
-	double rssiDiff = rssi - referenceRssi - flatFadingMitigation;
-
-	double i = pow(10, -((rssiDiff / 10) * pathLossExponent));
-
-	distance = referenceDistance * i;
-
-	return distance;
+	return referenceDistance * pow(10, -((rssi - referenceRssi - flatFadingMitigation) / 10) * pathLossExponent);
 }
 
+// kiểm trả chuỗi có trong chuỗi hay không
 bool isTargetExist(String target, String arr[], int size)
 {
 	for (int i = 0; i < size; i++)
@@ -271,8 +271,6 @@ public:
 		{
 			String name = advertisedDevice.getName().c_str();
 
-			// Serial.print("device name :"); Serial.println(name);
-
 			// if (isTargetExist(name, array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
 			if (true)
 			{
@@ -280,21 +278,26 @@ public:
 				// Serial.println(" target exists in the array");
 
 				bufferBeacons[bufferIndex].name = name;
+				// Serial.print("device name :"); Serial.println(name);
 
 				// RSSI
 				if (advertisedDevice.haveRSSI())
 				{
 					bufferBeacons[bufferIndex].rssi = advertisedDevice.getRSSI();
+					// Serial.print("device rssi :"); Serial.println(advertisedDevice.getRSSI());
 				}
 
 				// get data
 				if (advertisedDevice.haveManufacturerData())
 				{
-					bufferBeacons[bufferIndex].data = BLEUtils::buildHexData(nullptr, (uint8_t *)advertisedDevice.getManufacturerData().data(), advertisedDevice.getManufacturerData().length());
+					char *data = BLEUtils::buildHexData(nullptr, (uint8_t *)advertisedDevice.getManufacturerData().data(), advertisedDevice.getManufacturerData().length());
+					bufferBeacons[bufferIndex].data = data;
 				}
 
 				// MAC is mandatory for BT to work
-				strcpy(bufferBeacons[bufferIndex].address, advertisedDevice.getAddress().toString().c_str());
+				const char *addr =  advertisedDevice.getAddress().toString().c_str();
+				// Serial.print("device addr :"); Serial.println(addr);
+				strcpy(bufferBeacons[bufferIndex].address, addr);
 
 				bufferIndex++;
 			}
@@ -327,7 +330,7 @@ void connectWiFi()
 void connectMQTT()
 {
 	clientMQTT.setServer(mqttServer, mqttPort);
-	clientMQTT.setBufferSize(1048);
+	// clientMQTT.setBufferSize(1048);
 	Serial.print("Connecting to MQTT...");
 	if (clientMQTT.connect(ESP_NAME))
 	{
@@ -361,19 +364,10 @@ void SendDataPOST(String data)
 	WiFiClient client;
 	HTTPClient http;
 
-	char result[100];
-
-	// Ghép hai chuỗi vào nhau
-	strcpy(result, serverName);
-	strcat(result, api_part_log);
-
-	// Your Domain name with URL path or IP address with path
+	const char *result = combineStrings(serverName, api_part_log).c_str();
 	http.begin(client, result);
-
-	String recv_token = "1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35"; // Complete Bearer token
-	recv_token = "Bearer " + recv_token;							  // Adding "Bearer " before token
 	http.addHeader("Content-Type", "application/json");
-	http.addHeader("Authorization", recv_token); // Adding Bearer token as HTTP header
+	http.addHeader("Authorization", c_recv_token); // Adding Bearer token as HTTP header
 
 	// Send HTTP POST request
 	int httpResponseCode = http.POST(data);
@@ -387,17 +381,12 @@ void SendDataPOST(String data)
 void timeDataGET()
 {
 	HTTPClient http;
+   
+	const char *url_system_time = combineStrings(serverName, api_system_time).c_str();
 
-	String serverPath = "http://10.0.10.250/api/v1/map/system-time";
-
-	// Your Domain name with URL path or IP address with path
-	http.begin(serverPath.c_str());
-
-	String recv_token = "1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35"; // Complete Bearer token
-	recv_token = "Bearer " + recv_token;
-
+	http.begin(url_system_time);
 	http.addHeader("Content-Type", "application/json");
-	http.addHeader("Authorization", recv_token); // Adding Bearer token as HTTP header
+	http.addHeader("Authorization", c_recv_token); // Adding Bearer token as HTTP header
 
 	// Send HTTP GET request
 	int httpResponseCode = http.GET();
@@ -434,12 +423,11 @@ void device_HTTP_GET()
 
 	HTTPClient http;
 
-	String serverPath = "http://10.0.10.250/api/v1/device";
-	http.begin(serverPath.c_str());
+	const char *url_api_v1_device = combineStrings(serverName, api_v1_device).c_str();
 
-	String recv_token = "Bearer 1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35";
+	http.begin(url_api_v1_device);
 	http.addHeader("Content-Type", "application/json");
-	http.addHeader("Authorization", recv_token); // Adding Bearer token as HTTP header
+	http.addHeader("Authorization", c_recv_token);
 
 	// Send HTTP GET request
 	int httpResponseCode = http.GET();
@@ -484,17 +472,18 @@ void device_HTTP_GET()
 	http.end();
 }
 
-String payloadJson_01(unsigned long &timestamp , double &distance)
+String payloadJson_01(unsigned long &timestamp)
 {
 	// SenML begins
-	String payloadString = "{\n";
+	String payloadString = " {\n ";
 	payloadString += "\"name\":\"" ESP_NAME "\",\n";
 	payloadString += "\"device_id\":\"" ESP_NAME "\",\n";
-	payloadString += "\"type\":\"hub\",\n";
 	payloadString += "\"list_beacon_data\": [\n";
 
 	for (uint8_t i = 0; i < bufferIndex; i++)
 	{
+		double distance = getCalculatedDistance(bufferBeacons[i].rssi);
+
 		payloadString += "{\n";
 		payloadString += "\"name\":\"" + String(bufferBeacons[i].name) + "\",\n";
 		payloadString += "\"uuid\":\"" + String(bufferBeacons[i].data) + "\",\n";
@@ -584,29 +573,28 @@ void loop()
 
 	if (WiFi.status() == WL_CONNECTED)
 	{
-		for (uint8_t i = 0; i < bufferIndex; i++)
-		{
-			// tính toàn distance
-			double distance = getCalculatedDistance(bufferBeacons[i].rssi);
 
-			// create payload json
-			// String dataJson = payloadJson_02(timestamp, distance, String(bufferBeacons[i].name));
-			String dataJson = payloadJson_01(timestamp, distance);
-			Serial.println(dataJson);
+		// for (uint8_t i = 0; i < bufferIndex; i++)
+		// {
+		// 	Serial.println(String(bufferBeacons[i].data));
+		// }
 
-			Serial.print("MQTT state: ");
-			Serial.println(clientMQTT.state());
+		String dataJson = payloadJson_01(timestamp);
+		size_t byteCount = strlen(dataJson.c_str());
 
-			resultMQTT = clientMQTT.publish(c_TOPIC, dataJson.c_str());
+		// Serial.println(dataJson);
+		Serial.println(byteCount);
 
-			Serial.print("MQTT Result: ");
-			Serial.println(resultMQTT);
+		Serial.print("MQTT state: ");
+		Serial.println(clientMQTT.state());
 
-			Serial.println();
+		resultMQTT = clientMQTT.publish(c_TOPIC, dataJson.c_str());
 
-			clientMQTT.loop();
-			delay(50);
-		}
+		// dataJson.getBytes(message_char_buffer, dataJson.length() + 1);
+		// resultMQTT = clientMQTT.publish(c_TOPIC, message_char_buffer, dataJson.length(), false);
+
+		Serial.print("MQTT Result: ");
+		Serial.println(resultMQTT);
 	}
 
 	clientMQTT.loop();

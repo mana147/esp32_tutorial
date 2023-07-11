@@ -26,32 +26,44 @@
 // // Giải phóng bộ nhớ đã cấp phát
 // delete[] Toptic;
 
-#define ESP_NAME "esp_001_005"
-const char *c_TOPIC = "event1/client/esp/esp_001_005";
+#define ESP_NAME "esp_001_001"
+const char *c_TOPIC = "event1/client/esp/esp_001_001";
 
-// const char *ssid = "VCCorp";
-// const char *password = "Vcc123**";
-const char *ssid = "vcc-event1";
-const char *password = "A12345678";
-// const char *ssid = "P301";
+const char *ssid = "VCCorp";
+const char *password = "Vcc123**";
+
+// const char *ssid = "vcc-event1";
+// const char *password = "A12345678";
+
+// const char *ssid = "HONGDO17_303";
 // const char *password = "123456789";
 
-// const char *serverName = "http://phub.bctoyz.com";
-// const char *api_part_log = "/api/v1/map/log-devices";
-const char *serverName = "10.0.10.250";
+const char *c_recv_token = "Bearer 1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35";
+
+const char *serverName = "http://phub.bctoyz.com";
 const char *api_part_log = "/api/v1/map/log-devices";
+const char *api_v1_device = "/api/v1/device";
+const char *api_system_time = "/api/v1/map/system-time";
+
+// const char *serverName = "10.0.10.250";
+// const char *api_part_log = "/api/v1/map/log-devices";
 
 // const char *ntpServer = "pool.ntp.org"; // vn.pool.ntp.org
 // const long gmtOffset_sec = 3600;
 // const int daylightOffset_sec = 3600;
 
 /* MQTT credentials and connection */
-const char *mqttServer = "10.0.10.250";
-const int mqttPort = 1883;
-const char *mqttUser = "esp_001_001";
-const char *mqttPassword = "esp_001_001";
+// const char *mqttServer = "10.0.10.250";
+// const int mqttPort = 1883;
+// const char *mqttUser = "esp_001_001";
+// const char *mqttPassword = "esp_001_001";
 
-// const char *mqttServer = "mqtt.eclipseprojects.io";
+const char *mqttServer = "mqtt.eclipseprojects.io";
+const int mqttPort = 1883;
+// const char *mqttUser = "esp_001_001";
+// const char *mqttPassword = "esp_001_001";
+
+// const char *mqttServer = "mqtt.bctoyz.com";
 // const int mqttPort = 1883;
 // const char *mqttUser = "esp_001_001";
 // const char *mqttPassword = "esp_001_001";
