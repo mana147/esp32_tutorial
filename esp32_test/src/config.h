@@ -33,12 +33,12 @@ const char *c_TOPIC = "event1/client/esp/esp_004_004";
 const char *c_PATH_FILE_TXT = "/data.txt";
 
 
-// const char *ssid = "VCCorp";
-// const char *password = "Vcc123**";
+const char *ssid = "VCCorp";
+const char *password = "Vcc123**";
 // const char *ssid = "vcc-event1";
 // const char *password = "A12345678";
-const char *ssid = "HONGDO17_303";
-const char *password = "123456789";
+// const char *ssid = "HONGDO17_303";
+// const char *password = "123456789";
 
 const char *c_recv_token = "Bearer 1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35";
 

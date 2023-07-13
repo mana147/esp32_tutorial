@@ -1,9 +1,5 @@
 #include "config.h"
 
-#include <sstream>
-#include <string>
-#include <typeinfo>
-#include <algorithm>
 #include <Arduino.h>
 #include <esp_task_wdt.h>
 #include <WiFi.h>
@@ -15,33 +11,43 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 #include <ESP32Time.h>
+#include "FS.h"
+#include "SPIFFS.h"
 
 // We collect each device MAC and RSSI
 typedef struct
 {
-	String name;
-	char address[17];
+	char name[40];
+	char address[20];
 	int rssi;
-	char *data;
 } BeaconData;
+BeaconData bufferBeacons[num_device];
 
-uint8_t scanTimeBeacons = 3; // In seconds
+uint32_t u32t_scanTimeBeacons = 2; // In seconds
+uint16_t u16t_MQTT_PACKET_SIZE = 2048;
 uint8_t current_time = 0;
-
-uint8_t bufferIndex = 0;			  // Found devices counter
-BeaconData bufferBeacons[num_device]; // Buffer to store found device data
+uint8_t bufferIndex = 0; // Found devices counter
 uint8_t message_char_buffer[MQTT_MAX_PACKET_SIZE];
+String array_name_device[num_device];
 
 ESP32Time RTC;
-String array_name_device[num_device];
 WiFiClient espClient;
 PubSubClient clientMQTT(espClient);
+BLEScan *pBLEScan;
 
 // int _T;
 // int scanTime = 2;	   // In seconds
 // int scanInterval = 10; // In mili-seconds
 
 // -----------------------------------------
+
+void die()
+{
+	while (1)
+	{
+		delay(1000);
+	}
+}
 
 template <class T>
 String type_name(const T &)
@@ -58,12 +64,41 @@ String combineStrings(const char *str1, const char *str2)
 	return combinedString;
 }
 
-void die()
+String read_files_in_SPIFFS(String string)
 {
-	while (1)
+	String str;
+	File data_files;
+	data_files = SPIFFS.open(string, "r");
+	if (data_files)
 	{
-		delay(1000);
+		while (data_files.available())
+		{
+			str = data_files.readString();
+			data_files.flush();
+		}
+		data_files.close();
 	}
+	return str;
+}
+
+int write_files_in_SPIFFS(String string, String path)
+{
+	int key;
+	File data_flies;
+	data_flies = SPIFFS.open(path, "w");
+	if (data_flies)
+	{
+		data_flies.print(string);
+		data_flies.flush();
+		key = 1;
+	}
+	else
+	{
+		key = 0;
+	}
+
+	data_flies.close();
+	return key;
 }
 
 // -----------------------------------------
@@ -195,10 +230,14 @@ int connect2nearestAP()
 	Serial.print("Connecting ");
 	while ((WiFi.status() != WL_CONNECTED) && (i < WiFiTime * 10))
 	{
+		digitalWrite(LED, HIGH);
+		delay(100);
+		digitalWrite(LED, LOW);
 		delay(100);
 		Serial.print(".");
 		i++;
 	}
+	digitalWrite(LED, LOW);
 
 	Serial.println();
 
@@ -258,49 +297,40 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 public:
 	void onResult(BLEAdvertisedDevice advertisedDevice)
 	{
-		extern uint8_t bufferIndex;
-		extern BeaconData bufferBeacons[];
+		// extern uint8_t bufferIndex;
+		// extern BeaconData bufferBeacons[];
+
+		Serial.print("bufferIndex");
+		Serial.println(bufferIndex);
 
 		if (bufferIndex >= num_device)
 		{
 			return;
 		}
 
-		// get Name
+		// check device have name
 		if (advertisedDevice.haveName())
 		{
-			String name = advertisedDevice.getName().c_str();
+			// get device name
+			const char *name_beacon = advertisedDevice.getName().c_str();
+			strcpy(bufferBeacons[bufferIndex].name, name_beacon);
 
-			// if (isTargetExist(name, array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
-			if (true)
-			{
-				// Serial.print("device name :"); Serial.println(name);
-				// Serial.println(" target exists in the array");
+			// get device RSSI
+			bufferBeacons[bufferIndex].rssi = advertisedDevice.getRSSI();
 
-				bufferBeacons[bufferIndex].name = name;
-				// Serial.print("device name :"); Serial.println(name);
+			// get device MAC is mandatory
+			const char *addrMac = advertisedDevice.getAddress().toString().c_str();
+			strcpy(bufferBeacons[bufferIndex].address, addrMac);
 
-				// RSSI
-				if (advertisedDevice.haveRSSI())
-				{
-					bufferBeacons[bufferIndex].rssi = advertisedDevice.getRSSI();
-					// Serial.print("device rssi :"); Serial.println(advertisedDevice.getRSSI());
-				}
+			// if (isTargetExist(name_beacon, array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
 
-				// get data
-				if (advertisedDevice.haveManufacturerData())
-				{
-					char *data = BLEUtils::buildHexData(nullptr, (uint8_t *)advertisedDevice.getManufacturerData().data(), advertisedDevice.getManufacturerData().length());
-					bufferBeacons[bufferIndex].data = data;
-				}
-
-				// MAC is mandatory for BT to work
-				const char *addr =  advertisedDevice.getAddress().toString().c_str();
-				// Serial.print("device addr :"); Serial.println(addr);
-				strcpy(bufferBeacons[bufferIndex].address, addr);
-
-				bufferIndex++;
-			}
+			// get data
+			// if (advertisedDevice.haveManufacturerData())
+			// {
+			// 	char *data = BLEUtils::buildHexData(nullptr, (uint8_t *)advertisedDevice.getManufacturerData().data(), advertisedDevice.getManufacturerData().length());
+			// 	bufferBeacons[bufferIndex].data = data;
+			// }
+			bufferIndex++;
 		}
 	}
 };
@@ -330,9 +360,9 @@ void connectWiFi()
 void connectMQTT()
 {
 	clientMQTT.setServer(mqttServer, mqttPort);
-	// clientMQTT.setBufferSize(1048);
+	clientMQTT.setBufferSize(u16t_MQTT_PACKET_SIZE);
 	Serial.print("Connecting to MQTT...");
-	if (clientMQTT.connect(ESP_NAME))
+	if (clientMQTT.connect(ESP_NAME, mqttUser, mqttPassword))
 	{
 		Serial.println("connected");
 	}
@@ -340,22 +370,22 @@ void connectMQTT()
 	{
 		Serial.print("failed with state ");
 		Serial.println(clientMQTT.state());
-		delay(100);
 	}
+	delay(50);
 }
 
 void ScanBeacons()
 {
+	BLEAdvertisedDeviceCallbacks *cb_handleDevice = new MyAdvertisedDeviceCallbacks();
 
-	BLEScan *pBLEScan = BLEDevice::getScan(); // create new scan
-	pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+	pBLEScan = BLEDevice::getScan(); // create new scan
+	pBLEScan->setAdvertisedDeviceCallbacks(cb_handleDevice);
 	pBLEScan->setActiveScan(true); // active scan uses more power, but get results faster
-
-	BLEScanResults foundDevices = pBLEScan->start(scanTimeBeacons, false);
-
-	// Stop BLE
+	pBLEScan->start(u32t_scanTimeBeacons, false);
 	pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
 	pBLEScan->stop();
+
+	delete cb_handleDevice;
 	delay(50);
 }
 
@@ -381,7 +411,7 @@ void SendDataPOST(String data)
 void timeDataGET()
 {
 	HTTPClient http;
-   
+
 	const char *url_system_time = combineStrings(serverName, api_system_time).c_str();
 
 	http.begin(url_system_time);
@@ -417,67 +447,79 @@ void timeDataGET()
 	http.end();
 }
 
-void device_HTTP_GET()
+void handle_data_json(String payload)
 {
 	extern String array_name_device[];
 
+	JSONVar myObject = JSON.parse(payload);
+
+	if (JSON.typeof(myObject) == "undefined")
+	{
+		Serial.println("Parsing input failed!");
+		return;
+	}
+
+	if (myObject.hasOwnProperty("current_time"))
+	{
+		int current_time = myObject["current_time"];
+		RTC.setTime(current_time);
+	}
+
+	if (myObject.hasOwnProperty("data"))
+	{
+		int leng_data = myObject["data"].length();
+
+		for (int i = 0; i <= leng_data; i++)
+		{
+			String name = myObject["data"][i]["name"];
+			array_name_device[i] = name;
+		}
+	}
+}
+
+void device_HTTP_GET()
+{
+	Serial.println("begin http get list device ...... ");
+
 	HTTPClient http;
 
-	const char *url_api_v1_device = combineStrings(serverName, api_v1_device).c_str();
+	const char *url = combineStrings(serverName, api_v1_device_beacon).c_str();
 
-	http.begin(url_api_v1_device);
+	http.begin(url);
 	http.addHeader("Content-Type", "application/json");
 	http.addHeader("Authorization", c_recv_token);
 
 	// Send HTTP GET request
 	int httpResponseCode = http.GET();
 
-	if (httpResponseCode > 0)
+	Serial.print("HTTP Response code: ");
+	Serial.println(httpResponseCode);
+
+	if (httpResponseCode == 200)
 	{
-		Serial.print("HTTP Response code: ");
-		Serial.println(httpResponseCode);
-
+		Serial.println("> get list data beacon from server");
 		String payload = http.getString();
-		JSONVar myObject = JSON.parse(payload);
-		// Serial.println(myObject);
-
-		if (JSON.typeof(myObject) == "undefined")
-		{
-			Serial.println("Parsing input failed!");
-			return;
-		}
-
-		if (myObject.hasOwnProperty("current_time"))
-		{
-			// Serial.print("myObject[\"current_time\"] = ");
-			// Serial.println((int)myObject["current_time"]);
-			int current_time = myObject["current_time"];
-			RTC.setTime(current_time);
-		}
-
-		if (myObject.hasOwnProperty("data"))
-		{
-			int leng_data = myObject["data"].length();
-
-			for (int i = 0; i <= leng_data; i++)
-			{
-				String name = myObject["data"][i]["name"];
-				// Serial.println(name);
-				array_name_device[i] = name;
-			}
-		}
+		handle_data_json(payload);
+	}
+	else
+	{
+		Serial.println("> get list data beacon from SPIFFS");
+		String data_txt = read_files_in_SPIFFS(c_PATH_FILE_TXT);
+		handle_data_json(data_txt);
 	}
 
 	// Free resources
 	http.end();
 }
 
+// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
+
 String payloadJson_01(unsigned long &timestamp)
 {
 	// SenML begins
 	String payloadString = " {\n ";
 	payloadString += "\"name\":\"" ESP_NAME "\",\n";
-	payloadString += "\"device_id\":\"" ESP_NAME "\",\n";
 	payloadString += "\"list_beacon_data\": [\n";
 
 	for (uint8_t i = 0; i < bufferIndex; i++)
@@ -486,8 +528,6 @@ String payloadJson_01(unsigned long &timestamp)
 
 		payloadString += "{\n";
 		payloadString += "\"name\":\"" + String(bufferBeacons[i].name) + "\",\n";
-		payloadString += "\"uuid\":\"" + String(bufferBeacons[i].data) + "\",\n";
-		payloadString += "\"rssi\":\"" + String(bufferBeacons[i].rssi) + "\",\n";
 		payloadString += "\"distance\":\"" + String(distance) + "\"\n";
 		payloadString += "}\n";
 
@@ -498,7 +538,8 @@ String payloadJson_01(unsigned long &timestamp)
 	}
 
 	payloadString += "],\n";
-	payloadString += "\"time\":\"" + String(timestamp) + "\"\n";
+	payloadString += "\"time\":\"" + String(timestamp) + "\",\n";
+	payloadString += "\"heap_size\":\"" + String(esp_get_free_heap_size()) + "\"\n";
 	payloadString += "}";
 
 	return payloadString;
@@ -521,14 +562,19 @@ String payloadJson_02(unsigned long &timestamp, double &distance, String name)
 
 void setup()
 {
+	// init serial baud 115200
 	Serial.begin(115200);
+	// init SPIFFS
+	SPIFFS.begin();
+	// init pin mode
+	pinMode(LED, OUTPUT);
 	// connectWiFi();
 	connect2nearestAP();
 	// get list devices
 	device_HTTP_GET();
 	// Can only be called once
 	BLEDevice::init("BLE");
-
+	// delay
 	delay(100);
 }
 
@@ -539,67 +585,50 @@ void setup()
 void loop()
 {
 	Serial.println();
-	Serial.println();
-	boolean resultMQTT;
 
-	// Scan Beacons
 	ScanBeacons();
-	Serial.println();
 
-	Serial.print("bufferIndex : ");
-	Serial.println(bufferIndex);
-
-	unsigned long timestamp = RTC.getEpoch();
-	Serial.print("timestamp : ");
-	Serial.println(timestamp);
-
-	// Reconnect WiFi if not connected
-	Serial.print("wifi status : ");
-	Serial.println(WiFi.status());
 	while (WiFi.status() != WL_CONNECTED)
 	{
-		// connectWiFi();
-		// checkWiFi();
 		ESP.restart();
 	}
 
-	// Reconnect to MQTT if not connected
-	Serial.print("status_clientMQTT : ");
-	Serial.println(clientMQTT.connected());
 	while (!clientMQTT.connected())
 	{
 		connectMQTT();
 	}
 
-	if (WiFi.status() == WL_CONNECTED)
+	if (WiFi.status() == WL_CONNECTED && clientMQTT.connected())
 	{
-
-		// for (uint8_t i = 0; i < bufferIndex; i++)
-		// {
-		// 	Serial.println(String(bufferBeacons[i].data));
-		// }
+		unsigned long timestamp = RTC.getEpoch();
 
 		String dataJson = payloadJson_01(timestamp);
-		size_t byteCount = strlen(dataJson.c_str());
+		Serial.println(dataJson);
 
-		// Serial.println(dataJson);
+		size_t byteCount = strlen(dataJson.c_str());
+		Serial.print("byteCount dataJson : ");
 		Serial.println(byteCount);
 
-		Serial.print("MQTT state: ");
-		Serial.println(clientMQTT.state());
+		// Serial.print("MQTT state: ");
+		// Serial.println(clientMQTT.state());
 
-		resultMQTT = clientMQTT.publish(c_TOPIC, dataJson.c_str());
-
-		// dataJson.getBytes(message_char_buffer, dataJson.length() + 1);
-		// resultMQTT = clientMQTT.publish(c_TOPIC, message_char_buffer, dataJson.length(), false);
-
+		bool resultMQTT = clientMQTT.publish(c_TOPIC, dataJson.c_str());
 		Serial.print("MQTT Result: ");
 		Serial.println(resultMQTT);
+
+		if (resultMQTT == 1)
+		{
+			digitalWrite(LED, HIGH);
+		}
 	}
 
 	clientMQTT.loop();
 	bufferIndex = 0;
+
+	Serial.println("[APP] Free_heap_size: " + String(esp_get_free_heap_size()) + " bytes");
+
 	delay(100);
+	digitalWrite(LED, LOW);
 }
 
 // -----------------------------------------------------------------------------------------

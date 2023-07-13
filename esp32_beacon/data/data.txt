@@ -1,0 +1,44 @@
+{
+    "result": 1,
+    "current_time": 1689129034,
+    "message": "Danh sách beacon ",
+    "data": [
+        {
+            "name": "test 2",
+            "uuid": "uuid 2"
+        },
+        {
+            "name": "dps2",
+            "uuid": "fda50693a4e24fb1afcfc6eb07647827"
+        },
+        {
+            "name": "dps3",
+            "uuid": "FDA50693-A4E2-4FB1-AFCF-C6EB07647827"
+        },
+        {
+            "name": "R23040111",
+            "uuid": "bcR23040111"
+        },
+        {
+            "name": "R23040110",
+            "uuid": "bcR23040110"
+        },
+        {
+            "name": "R23040106-",
+            "uuid": "bcR23040106-"
+        },
+        {
+            "name": "R23040107",
+            "uuid": "bcR23040107"
+        },
+        {
+            "name": "R23040108",
+            "uuid": "bcR23040108"
+        },
+        {
+            "name": "dps1",
+            "uuid": "FDA50693-A4E2-4FB1-AFCF-C6EB07647825"
+        }
+    ],
+    "error": {}
+}
