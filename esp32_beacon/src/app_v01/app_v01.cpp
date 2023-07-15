@@ -1,6 +1,6 @@
 #include "app_v01.h"
 #include "app_v01.config.h"
-
+#include <Arduino.h>
 #include <esp_task_wdt.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -143,10 +143,10 @@ void printLocalTime()
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo))
     {
-        Serial.println("Failed to obtain time");
+        DEBUG_1("Failed to obtain time");
         return;
     }
-    Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+    DEBUG_2(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 
 int connect2nearestAP()
@@ -167,18 +167,17 @@ int connect2nearestAP()
     delay(SaveDisconnectTime); // 500ms seems to work in most cases, may depend on AP
     WiFi.disconnect(true);     // delete old config
 
-    Serial.println("scan start");
+    DEBUG_1("scan start");
     n = WiFi.scanNetworks(); // WiFi.scanNetworks will return the number of networks found
-    Serial.println("scan done");
+    DEBUG_1("scan done");
 
     if (n == 0)
     {
-        Serial.println("no networks found");
+        DEBUG_1("no networks found");
     }
     else
     {
-        Serial.print(n);
-        Serial.println(" networks found");
+        DEBUG_2(n, " networks found")
         for (int i = 0; i < n; ++i)
         {
             // Print SSID and RSSI for each network found
@@ -196,7 +195,7 @@ int connect2nearestAP()
             delay(10);
         }
     }
-    Serial.println();
+    DEBUG_1("");
 
     while (String(ssid) != String(WiFi.SSID(i)) && (i < n))
     {
@@ -205,9 +204,7 @@ int connect2nearestAP()
 
     if (i == n)
     {
-        Serial.print("No network with SSID ");
-        Serial.println(ssid);
-        Serial.print(" found!");
+        DEBUG_2("No network with SSID ", ssid);
 
         digitalWrite(LED, HIGH);
         delay(3000);
@@ -218,25 +215,24 @@ int connect2nearestAP()
         return WiFiNoSSID;
     }
 
-    Serial.print("SSID match found at: ");
-    Serial.println(i + 1);
+    DEBUG_2("SSID match found at: ", i + 1);
 
     WiFi.setHostname(hostname.c_str());
     WiFi.begin(ssid, password, 0, WiFi.BSSID(i));
     i = 0;
-    Serial.print("Connecting ");
+    DEBUG_1("Connecting ");
     while ((WiFi.status() != WL_CONNECTED) && (i < WiFiTime * 10))
     {
         digitalWrite(LED, HIGH);
         delay(100);
         digitalWrite(LED, LOW);
         delay(100);
-        Serial.print(".");
+        DEBUG_1(".");
         i++;
     }
     digitalWrite(LED, LOW);
 
-    Serial.println();
+    DEBUG_1("");
 
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -277,8 +273,7 @@ void checkWiFi()
     }
     while (connect2nearestAP() != WiFiOK)
     {
-        Serial.print("connect2nearestAP was called #");
-        Serial.println(i);
+        DEBUG_2("connect2nearestAP was called #", 1);
         delay(100);
         i++;
         if (i > 10)
@@ -311,7 +306,8 @@ public:
             // get device name
             const char *name_beacon = advertisedDevice.getName().c_str();
 
-            if (isTargetExist(advertisedDevice.getName().c_str(), array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
+            // if (isTargetExist(advertisedDevice.getName().c_str(), array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
+            if (true)
             {
                 // get device name
                 strcpy(bufferBeacons[bufferIndex].name, name_beacon);
@@ -594,10 +590,11 @@ bool optionMODE()
 
 App01::App01()
 {
+    // code
 }
 
 // setup
-void App01::SetupApp01()
+void App01::Setup()
 {
     // init serial baud 115200
     Serial.begin(115200);
@@ -640,7 +637,7 @@ void App01::SetupApp01()
 }
 
 // run in loop
-void App01::RunApp01()
+void App01::Loop()
 {
 
     Serial.println();
@@ -662,7 +659,7 @@ void App01::RunApp01()
         unsigned long timestamp = RTC.getEpoch();
 
         String dataJson = payloadJson_01(timestamp);
-        // Serial.println(dataJson);
+        Serial.println(dataJson);
 
         // size_t byteCount = strlen(dataJson.c_str());
         // Serial.print("byteCount dataJson : ");

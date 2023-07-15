@@ -1,6 +1,11 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#define DEBUG_1(x) Serial.println((x));
+#define DEBUG_2(n, x)  \
+    Serial.print((n)); \
+    Serial.println((x));
+
 #define MaxSecWiFi 30           // max time in s for WiFi setup, function will return WiFiErrorCode if WiFi was not successful.
 #define WiFiErrorCode 1000      // see above
 #define SaveDisconnectTime 1000 // Time im ms for save disconnection, needed to avoid that WiFi works only evey secon boot: https://github.com/espressif/arduino-esp32/issues/2501

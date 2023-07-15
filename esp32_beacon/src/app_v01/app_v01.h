@@ -1,14 +1,12 @@
-#ifndef _App_H_
-#define _App_H_
-
-#include <Arduino.h>
+#ifndef _App_v01_H_
+#define _App_v01_H_
 
 class App01
 {
 public:
     App01();
-    void SetupApp01();
-    void RunApp01();
+    void Setup();
+    void Loop();
 
 private:
     // code 
