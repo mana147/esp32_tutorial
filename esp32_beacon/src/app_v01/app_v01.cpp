@@ -527,6 +527,7 @@ String payloadJson_01(unsigned long &timestamp)
 
         payloadString += "{\n";
         payloadString += "\"name\":\"" + String(bufferBeacons[i].name) + "\",\n";
+        payloadString += "\"address\":\"" + String(bufferBeacons[i].address) + "\",\n";
         payloadString += "\"distance\":\"" + String(distance) + "\"\n";
         payloadString += "}\n";
 
@@ -659,12 +660,15 @@ void App01::Loop()
         unsigned long timestamp = RTC.getEpoch();
 
         String dataJson = payloadJson_01(timestamp);
-        Serial.println(dataJson);
+        DEBUG_2("dataJson", dataJson);
+        size_t byteCount_dataJson = strlen(dataJson.c_str());
+        DEBUG_2("byteCount dataJson : ", byteCount_dataJson);
 
-        // size_t byteCount = strlen(dataJson.c_str());
-        // Serial.print("byteCount dataJson : ");
-        // Serial.println(byteCount);
+        // String encrypt_data = encrypt(dataJson, "VCC123");
+        // size_t byteCount_encrypt_data = strlen(encrypt_data.c_str());
+        // DEBUG_2("byteCount encrypt_data : ", byteCount_encrypt_data);
 
+        // DEBUG_2("encrypt_data", decrypt(encrypt_data, "VCC123"));
         // Serial.print("MQTT state: ");
         // Serial.println(clientMQTT.state());
 

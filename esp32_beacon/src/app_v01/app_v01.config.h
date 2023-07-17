@@ -36,12 +36,12 @@ const char *mqttPassword = "esp_001_001";
 char *ssid = nullptr;
 char *password = nullptr;
 
-// char ssid_on[] = "VCCorp";
-// char password_on[] = "Vcc123**";
+char ssid_on[] = "VCCorp";
+char password_on[] = "Vcc123**";
 char ssid_off[] = "vcc-event1";
 char password_off[] = "A12345678";
-char ssid_on[] = "HONGDO17_303";
-char password_on[] = "123456789";
+// char ssid_on[] = "HONGDO17_303";
+// char password_on[] = "123456789";
 
 const char *c_recv_token = "Bearer 1|p02XlC16ykTHCnKRpQKM5iF6uijShnzqwtNE9h35";
 
