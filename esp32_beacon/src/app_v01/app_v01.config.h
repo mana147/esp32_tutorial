@@ -21,8 +21,8 @@
 #define LED 2
 #define PIN_NUMB_TOUCH 4
 
-#define ESP_NAME "esp_001_001"
-const char *c_TOPIC = "event1/client/esp/esp_001_001";
+#define ESP_NAME "esp_004_004"
+const char *c_TOPIC = "event1/client/esp/esp_004_004";
 const char *c_PATH_FILE_TXT = "/data.txt";
 
 char *mqttServer = nullptr;
@@ -30,8 +30,8 @@ char mqttServer_off[] = "10.0.10.250";
 char mqttServer_on[] = "mqtt.bctoyz.com";
 
 const int mqttPort = 1883;
-const char *mqttUser = "esp_001_001";
-const char *mqttPassword = "esp_001_001";
+const char *mqttUser = "esp_004_004";
+const char *mqttPassword = "esp_004_004";
 
 char *ssid = nullptr;
 char *password = nullptr;

@@ -1,7 +1,6 @@
 #include "app_v01.h"
 #include "app_v01.config.h"
 #include <Arduino.h>
-#include <esp_task_wdt.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
@@ -102,6 +101,7 @@ String encrypt(const String &message, const String &key)
     for (size_t i = 0; i < message.length(); i++)
     {
         char c = message.charAt(i) ^ key.charAt(i % key.length());
+        DEBUG_2("c: ", c);
         encrypted += c;
     }
     return encrypted;
@@ -110,6 +110,19 @@ String encrypt(const String &message, const String &key)
 String decrypt(const String &encrypted, const String &key)
 {
     return encrypt(encrypted, key);
+}
+
+void encryptXOR(char *message, size_t messageLength, const char *key, size_t keyLength)
+{
+    for (size_t i = 0; i < messageLength; i++)
+    {
+        message[i] = message[i] ^ key[i % keyLength];
+    }
+}
+
+void decryptXOR(char *encrypted, size_t encryptedLength, const char *key, size_t keyLength)
+{
+    encryptXOR(encrypted, encryptedLength, key, keyLength);
 }
 
 // -----------------------------------------
@@ -227,12 +240,10 @@ int connect2nearestAP()
         delay(100);
         digitalWrite(LED, LOW);
         delay(100);
-        DEBUG_1(".");
+        Serial.print(".");
         i++;
     }
     digitalWrite(LED, LOW);
-
-    DEBUG_1("");
 
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -306,7 +317,7 @@ public:
             // get device name
             const char *name_beacon = advertisedDevice.getName().c_str();
 
-            // if (isTargetExist(advertisedDevice.getName().c_str(), array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
+            //if (isTargetExist(advertisedDevice.getName().c_str(), array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
             if (true)
             {
                 // get device name
@@ -381,6 +392,7 @@ void ScanBeacons()
     pBLEScan->setAdvertisedDeviceCallbacks(cb_handleDevice);
     pBLEScan->setActiveScan(true); // active scan uses more power, but get results faster
     pBLEScan->start(u32t_scanTimeBeacons, false);
+    delay(50);
     pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
     pBLEScan->stop();
 
@@ -517,19 +529,19 @@ void device_HTTP_GET()
 String payloadJson_01(unsigned long &timestamp)
 {
     // SenML begins
-    String payloadString = "{\n";
-    payloadString += "\"name\":\"" ESP_NAME "\",\n";
-    payloadString += "\"list_beacon_data\": [\n";
+    String payloadString = "{";
+    payloadString += "\"name\":\"" ESP_NAME "\",";
+    payloadString += "\"list_beacon_data\": [";
 
     for (uint8_t i = 0; i < bufferIndex; i++)
     {
         double distance = getCalculatedDistance(bufferBeacons[i].rssi);
 
-        payloadString += "{\n";
-        payloadString += "\"name\":\"" + String(bufferBeacons[i].name) + "\",\n";
-        payloadString += "\"address\":\"" + String(bufferBeacons[i].address) + "\",\n";
-        payloadString += "\"distance\":\"" + String(distance) + "\"\n";
-        payloadString += "}\n";
+        payloadString += "{";
+        payloadString += "\"name\":\"" + String(bufferBeacons[i].name) + "\",";
+        payloadString += "\"address\":\"" + String(bufferBeacons[i].address) + "\",";
+        payloadString += "\"distance\":\"" + String(distance) + "\"";
+        payloadString += "}";
 
         if (i < bufferIndex - 1)
         {
@@ -537,9 +549,9 @@ String payloadJson_01(unsigned long &timestamp)
         }
     }
 
-    payloadString += "],\n";
-    payloadString += "\"time\":\"" + String(timestamp) + "\",\n";
-    payloadString += "\"heap_size\":\"" + String(esp_get_free_heap_size()) + "\"\n";
+    payloadString += "],";
+    payloadString += "\"time\":\"" + String(timestamp) + "\",";
+    payloadString += "\"heap_size\":\"" + String(esp_get_free_heap_size()) + "\"";
     payloadString += "}";
 
     return payloadString;
@@ -547,14 +559,89 @@ String payloadJson_01(unsigned long &timestamp)
 
 String payloadJson_02(unsigned long &timestamp, double &distance, String name)
 {
-    String payload = "{\n";
-    payload += "\"distance\": \"" + String(distance) + "\",\n";
-    payload += "\"device_name\":\"" ESP_NAME "\",\n";
-    payload += "\"beacon_name\":\"" + name + "\",\n";
-    payload += "\"timestamp\":\"" + String(timestamp) + "\"\n";
+    String payload = "{";
+    payload += "\"distance\": \"" + String(distance) + "\",";
+    payload += "\"device_name\":\"" ESP_NAME "\",";
+    payload += "\"beacon_name\":\"" + name + "\",";
+    payload += "\"timestamp\":\"" + String(timestamp) + "\"";
     payload += "}";
     return payload;
 }
+// --------------------------------------------------------------------------
+void appendToString(char *str, const char *toAppend)
+{
+    strcat(str, toAppend);
+}
+
+void appendToString(char *str, int num)
+{
+    char numStr[20];
+    sprintf(numStr, "%d", num);
+    strcat(str, numStr);
+}
+
+void appendToString(char *str, unsigned long num)
+{
+    char numStr[20];
+    sprintf(numStr, "%lu", num);
+    strcat(str, numStr);
+}
+
+void appendToString(char *str, double num)
+{
+    char numStr[10];
+    dtostrf(num, 6, 2, numStr);
+    strcat(str, numStr);
+}
+
+// void appendToString(char *str, uint32_t num)
+// {
+//     char numStr[20];
+//     sprintf(numStr, "%lu", num);
+//     strcat(str, numStr);
+// }
+
+void char_payloadJson(unsigned long &timestamp, char *payloadString)
+{
+    // SenML begins
+    strcpy(payloadString, "{");
+    appendToString(payloadString, "\"name\":\"" ESP_NAME "\",");
+    appendToString(payloadString, "\"list_beacon_data\": [");
+
+    for (uint8_t i = 0; i < bufferIndex; i++)
+    {
+        double distance = getCalculatedDistance(bufferBeacons[i].rssi);
+
+        appendToString(payloadString, "{");
+        appendToString(payloadString, "\"name\":\"");
+        appendToString(payloadString, bufferBeacons[i].name);
+        appendToString(payloadString, "\",");
+        appendToString(payloadString, "\"address\":\"");
+        appendToString(payloadString, bufferBeacons[i].address);
+        appendToString(payloadString, "\",");
+        appendToString(payloadString, "\"distance\":\"");
+        appendToString(payloadString, distance);
+        appendToString(payloadString, "\"");
+        appendToString(payloadString, "}");
+
+        if (i < bufferIndex - 1)
+        {
+            appendToString(payloadString, ",");
+        }
+    }
+
+    // int heap_size = esp_get_free_heap_size();
+    appendToString(payloadString, "],");
+    appendToString(payloadString, "\"time\":\"");
+    appendToString(payloadString, timestamp);
+    // appendToString(payloadString, "\",");
+    // appendToString(payloadString, "\"heap_size\":\"");
+    // appendToString(payloadString, heap_size);
+    appendToString(payloadString, "\"");
+    appendToString(payloadString, "}");
+}
+
+// --------------------------------------------------------------------------
 
 bool optionMODE()
 {
@@ -659,10 +746,18 @@ void App01::Loop()
     {
         unsigned long timestamp = RTC.getEpoch();
 
-        String dataJson = payloadJson_01(timestamp);
-        DEBUG_2("dataJson", dataJson);
-        size_t byteCount_dataJson = strlen(dataJson.c_str());
-        DEBUG_2("byteCount dataJson : ", byteCount_dataJson);
+        // char char_payload[u16t_MQTT_PACKET_SIZE];
+        char *myArray = (char *)calloc(u16t_MQTT_PACKET_SIZE, sizeof(char));
+
+        char_payloadJson(timestamp, myArray);
+
+        // DEBUG_2("char_payload > \n", myArray);
+
+        // String dataJson = payloadJson_01(timestamp);
+        // DEBUG_2("dataJson.c_str()", dataJson.c_str());
+
+        // size_t byteCount_dataJson = strlen(dataJson.c_str());
+        // DEBUG_2("byteCount dataJson : ", byteCount_dataJson);
 
         // String encrypt_data = encrypt(dataJson, "VCC123");
         // size_t byteCount_encrypt_data = strlen(encrypt_data.c_str());
@@ -672,7 +767,7 @@ void App01::Loop()
         // Serial.print("MQTT state: ");
         // Serial.println(clientMQTT.state());
 
-        bool resultMQTT = clientMQTT.publish(c_TOPIC, dataJson.c_str());
+        bool resultMQTT = clientMQTT.publish(c_TOPIC, myArray);
         Serial.print("MQTT Result: ");
         Serial.println(resultMQTT);
 
@@ -680,6 +775,8 @@ void App01::Loop()
         {
             digitalWrite(LED, HIGH);
         }
+
+        free(myArray);
     }
 
     clientMQTT.loop();
