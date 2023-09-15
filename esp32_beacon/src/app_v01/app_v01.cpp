@@ -317,7 +317,7 @@ public:
             // get device name
             const char *name_beacon = advertisedDevice.getName().c_str();
 
-            //if (isTargetExist(advertisedDevice.getName().c_str(), array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
+            // if (isTargetExist(advertisedDevice.getName().c_str(), array_name_device, sizeof(array_name_device) / sizeof(array_name_device[0])))
             if (true)
             {
                 // get device name
@@ -367,6 +367,28 @@ void connectWiFi()
     Serial.println(WiFi.localIP());
 }
 
+void callback(char *topic, byte *payload, unsigned int length)
+{
+    Serial.print("Message arrived [");
+    Serial.print(topic);
+    Serial.print("] ");
+    for (int i = 0; i < length; i++)
+    {
+        Serial.print((char)payload[i]);
+    }
+    Serial.println();
+
+    // Switch on the LED if an 1 was received as first character
+    if ((char)payload[0] == '1')
+    {
+        Serial.println("LOW");
+    }
+    else
+    {
+        Serial.println("HIGHT");
+    }
+}
+
 void connectMQTT()
 {
     clientMQTT.setServer(mqttServer, mqttPort);
@@ -382,6 +404,8 @@ void connectMQTT()
         Serial.println(clientMQTT.state());
     }
     delay(50);
+
+    clientMQTT.setCallback(callback);
 }
 
 void ScanBeacons()
